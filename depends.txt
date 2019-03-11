@@ -1,0 +1,4 @@
+# packages in environment at /home/luffysman/ProgramFiles/anaconda3/envs/tf_cpu:
+#
+# Name                    Version                   Build  Channel
+opencv                    3.4.2            py36h6fd60c2_1    https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main

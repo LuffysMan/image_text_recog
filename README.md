@@ -10,6 +10,7 @@ MTWI 2018 挑战赛一 网络图像文本识别
 大家各自进行研究和实现的过程中, 找到的比较有用的文章等资料, 把题目和链接写到对应的类别下面, 方便大家互相扩充知识面;
 1.数据预处理:
 [举例]python扩大训练集样本数量-图片转换、改变尺寸 https://blog.csdn.net/weixin_42052460/article/details/80861056
+【python】详解zipfile模块读取处理压缩文件实例: https://blog.csdn.net/brucewong0516/article/details/79064384
 
 2.模型定义:
 
