@@ -20,6 +20,10 @@ g_txt_train_prod_path = os.path.join(os.getcwd(), TXT_TRAIN_PROD_PATH)
 
 g_exitFlag = 0
 
+g_img_total = 0             #图片总数
+g_img_prod_count = 0        #已处理图片总数
+g_img_count_lock = threading.Lock()
+
 class myThread(threading.Thread):
     __threadCount = 0
     __lock = threading.Lock()
@@ -31,7 +35,7 @@ class myThread(threading.Thread):
         self._queue = q
 
     def run(self):
-        print("开始线程： " + self._name)
+        # print("开始线程： " + self._name)
         # queueLock = threading.Lock()
         while not g_exitFlag:
             self.__lock.acquire()
@@ -44,36 +48,37 @@ class myThread(threading.Thread):
             else:
                 self.__lock.release()
                 # queueLock.release()
-        print("退出线程： " + self._name)
+        # print("退出线程： {}".format(self._name))
     @property
     def threadID(self):
         return self._threadID
-        
+
 def divide_conquer():
-    # global image_path_prod, txt_path_prod, allpic, curImage, nowtxt, nowline, invalidimg
     os.chdir(os.path.join(os.getcwd(), IMAGE_TRAIN_PATH))   #修改当前工作路径, 方便获取文件名
     image_names_train = glob.glob('*.jpg')                     #获取工作路径下所有jpg格式文件名到list中
-    count_img = len(image_names_train) 
-    print("total images: {}".format(count_img))
+    global g_img_total
+    g_img_total = len(image_names_train) 
+    print("total images: {}".format(g_img_total))
     #划分任务分配给多线程
-    threadCount = 2 * multiprocessing.cpu_count()
+    threadCount =  multiprocessing.cpu_count()
     threadNames = ['thread-{}'.format(i) for i in range(threadCount)]
     threads = []
     queueLock1 = threading.Lock()
     workQueue = queue.Queue(2*threadCount)
     #创建新线程
+    print("start {} threads".format(threadCount))
     for tName in threadNames:
         thread = myThread(tName, workQueue)
         thread.start()
         threads.append(thread)
     #分割数据      
-    fraction_size = int(count_img/threadCount)
-    remains_count = int(count_img % threadCount)
+    fraction_size = int(g_img_total/threadCount)
+    remains_count = int(g_img_total % threadCount)
     fractions = []
     for i in range(threadCount):
         fractions.append(image_names_train[i*fraction_size:(i+1)*fraction_size])
     if remains_count:
-        fractions.append(image_names_train[count_img - remains_count: count_img])
+        fractions.append(image_names_train[g_img_total - remains_count: g_img_total])
     #填充队列
     queueLock1.acquire()
     for each in fractions:
@@ -94,9 +99,13 @@ def process_image(imageNames):
     #读取txt文件， 把每一行文本内容保存的新文件， 读取每行坐标调用裁剪函数
     imgCounts = len(imageNames)
     invalidimg = []
+    global g_img_prod_count
     for j in range(imgCounts):
+        g_img_count_lock.acquire()
+        g_img_prod_count += 1
+        g_img_count_lock.release()
+        print("\r{}/{}".format(*(str(g_img_prod_count), str(g_img_total))), end='', flush=True)      #实时输出处理进度
         imageTxt = os.path.join(g_txt_train_path, imageNames[j][:-4] + '.txt')     # txt路径
-        print('处理图片: ' + imageTxt)
         imageName =imageNames[j]
         # curImage = imageName
         # nowtxt = imageTxt
