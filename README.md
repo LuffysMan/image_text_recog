@@ -6,7 +6,7 @@ MTWI 2018 挑战赛一 网络图像文本识别
 3. 模型可视化: 包括模型训练loss, acc, 模型验证loss, acc的曲线绘制; 也可以考虑模型各层的可视化, 卷积核的可视化等, 可帮助加深对模型理解和调试;
 4. 算法调试和优化: 对定义好的算法进行各部分进行允许调试, 查找不合理或者有误的部分, 提出优化的意见;
 
-#数据集预处理部分
+# 数据集预处理部分
 dataset.py
 dataset|
         |image_train        #训练集图片
@@ -14,7 +14,7 @@ dataset|
         |image_train_prod   #训练集图片进行分割后结果
         |txt_train_prod     #训练集文本处理后结果
         |image_test         #测试集图片
-##关于dataset.py
+## 关于dataset.py
 需要加载的模块：opencv和math
 主要功能：读取image_train和txt_train中的数据集， 根据提供的坐标对图片进行裁剪， 并输出对应的图片和文本
 到img_train_prod和txt_train_prod； 
