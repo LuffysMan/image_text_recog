@@ -11,6 +11,11 @@ MTWI 2018 挑战赛一 网络图像文本识别
 1.数据预处理:
 [举例]python扩大训练集样本数量-图片转换、改变尺寸 https://blog.csdn.net/weixin_42052460/article/details/80861056
 【python】详解zipfile模块读取处理压缩文件实例: https://blog.csdn.net/brucewong0516/article/details/79064384
+多线程处理图片：
+    Python 类中的"静态"成员变量: https://www.cnblogs.com/turtle-fly/p/3280610.html
+    Python的访问修饰符： http://blog.sina.com.cn/s/blog_bb48e6be0102wbgd.html
+    使用@property: 廖雪峰博客
+    python 全局变量引用与修改： https://www.cnblogs.com/yanfengt/p/6305542.html
 
 2.模型定义:
 
