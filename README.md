@@ -15,15 +15,16 @@ dataset|
         |txt_train_prod     #训练集文本处理后结果  
         |image_test         #测试集图片  
 ## 关于dataset.py  
-需要加载的模块：opencv和math  
-主要功能：读取image_train和txt_train中的数据集， 根据提供的坐标对图片进行裁剪， 并输出对应的图片和文本
+需要加载的模块：  
+opencv和math  
+主要功能：  
+读取image_train和txt_train中的数据集， 根据提供的坐标对图片进行裁剪， 并输出对应的图片和文本
 到img_train_prod和txt_train_prod；  
 使用方法：  
 运行前可配置开启的线程数（默认线程数同计算机CPU数量)， 配置变量g_thread_count， 建议数量不超过cpu数量2倍  
-在终端输入：python dataset.py\r
-参考文献:  
-大家各自进行研究和实现的过程中, 找到的比较有用的文章等资料, 把题目和链接写到对应的类别下面, 方便大家互相扩充知识面;  
-1.数据预处理:  
+在终端输入：  
+python dataset.py  
+## 参考文献:  
 python扩大训练集样本数量-图片转换、改变尺寸 https://blog.csdn.net/weixin_42052460/article/details/80861056  
 【python】详解zipfile模块读取处理压缩文件实例: https://blog.csdn.net/brucewong0516/article/details/79064384  
 多线程处理图片：  
