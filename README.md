@@ -7,19 +7,24 @@ MTWI 2018 挑战赛一 网络图像文本识别
 4. 算法调试和优化: 对定义好的算法进行各部分进行允许调试, 查找不合理或者有误的部分, 提出优化的意见;
 
 # 数据集预处理部分
-dataset.py
-dataset|
-        |image_train        #训练集图片
-        |txt_train          #训练集图片对应文本
-        |image_train_prod   #训练集图片进行分割后结果
-        |txt_train_prod     #训练集文本处理后结果
-        |image_test         #测试集图片
+
+dataset.py \r
+dataset| \r
+        |image_train        #训练集图片\r
+        |txt_train          #训练集图片对应文本\r
+        |image_train_prod   #训练集图片进行分割后结果\r
+        |txt_train_prod     #训练集文本处理后结果\r
+        |image_test         #测试集图片\r
 ## 关于dataset.py
 需要加载的模块：opencv和math
+
 主要功能：读取image_train和txt_train中的数据集， 根据提供的坐标对图片进行裁剪， 并输出对应的图片和文本
 到img_train_prod和txt_train_prod； 
+
 使用方法：
+
 运行前可配置开启的线程数（默认线程数同计算机CPU数量)， 配置变量g_thread_count， 建议数量不超过cpu数量2倍
+
 在终端输入：python dataset.py
 
 参考文献:
