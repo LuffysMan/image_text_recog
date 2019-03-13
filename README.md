@@ -33,11 +33,11 @@ python扩大训练集样本数量-图片转换、改变尺寸 https://blog.csdn.
     python 全局变量引用与修改： https://www.cnblogs.com/yanfengt/p/6305542.html  
 
 
-2.模型定义:
+# 模型定义:
 
-3.模型可视化:
+# 模型可视化:
 
-4.算法调试和优化:
+# 算法调试和优化:
 
 
 
