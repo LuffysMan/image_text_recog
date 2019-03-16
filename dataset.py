@@ -133,7 +133,7 @@ def process_image(imageNames):
                         lineContent = str(lineContent)[2:-2]
                     else:
                         lineContent = str(lineContent)[2:-4]
-                    file = open(newTxtName,'w')				#打开or创建一个新的txt文件
+                    file = open(newTxtName,'w', encoding='utf-8')	#打开or创建一个新的txt文件
                     file.write(lineContent)        					#写入内容信息  
                     file.close()  
                     # str转float
