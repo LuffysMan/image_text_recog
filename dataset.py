@@ -1,3 +1,4 @@
+#coding=utf-8
 import cv2
 import math
 import os
@@ -148,9 +149,6 @@ def cropping_image(imageNames):
         print("\r{}/{}".format(*(str(g_img_prod_count), str(g_img_total))), end='', flush=True)      #实时输出处理进度
         imageTxt = os.path.join(g_txt_train_path, imageNames[j][:-4] + '.txt')     # txt路径
         imageName =imageNames[j]
-        # curImage = imageName
-        # nowtxt = imageTxt
-        # nowline = 0
         imgSrc = cv2.imread(imageName)
         if(imgSrc is None):
             invalidimg.append(imageName)
@@ -162,19 +160,17 @@ def cropping_image(imageNames):
             for i in range(length):
                 lines[i] = str(lines[i], encoding = "utf-8")    #从bytes转为str格式
                 lineContent = lines[i].split(',')[-1:]
-                # nowline = i
                 if ((lineContent != ['###\n']) and (lineContent != ['###'])):
                     s = s + 1
-                    # allpic+=1
                     #保存新图片/txt格式为"原名字+编号+.jpg/.txt"
                     newImageName = os.path.join(g_img_train_prod_path, imageName[:-3] + str(s) + '.jpg')
-                    newTxtName = os.path.join(g_txt_train_prod_path, imageName[:-3] + str(s) + '.txt')
+                    # newTxtName = os.path.join(g_txt_train_prod_path, imageName[:-3] + str(s) + '.txt')
                     #写入新TXT文件
                     if (s == length):
                         lineContent = str(lineContent)[2:-2]
                     else:
                         lineContent = str(lineContent)[2:-4]
-                    # file = open(newTxtName,'w')				#打开or创建一个新的txt文件
+                    # file = open(newTxtName,'w', encoding='utf-8)		#打开or创建一个新的txt文件
                     # file.write(lineContent)        					#写入内容信息  
                     # file.close()  
                     # str转float
