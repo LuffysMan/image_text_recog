@@ -96,7 +96,7 @@ def divide_conquer():
     #创建新线程
     print("start {} threads".format(g_thread_count))
     for tName in threadNames:
-        thread = myThread(tName, cropping_image, workQueue, cropQueueLock)
+        thread = myThread(tName, t_crop_image, workQueue, cropQueueLock)
         thread.start()
         threads.append(thread)
     #分割数据      
@@ -108,45 +108,53 @@ def divide_conquer():
     if remains_count:
         fractions.append(image_names_train[g_img_total - remains_count: g_img_total])
     #填充队列
+    print("start filling cropping queue")
     cropQueueLock.acquire()
     for each in fractions:
         workQueue.put(each)
     cropQueueLock.release()
-    #等待队列清空
-    while not workQueue.empty():
-        pass
+
     #通知线程退出
     # global g_exitFlag_workqueue   #全局变量在函数内部引用没有歧义， 但是在函数内部修改值的时候，需要加上global声明，否则变为局部变量
     # g_exitFlag_workqueue = 1
     #开启record处理线程
+    print("records--qsize--total")
     recThreads = processing_record()
-
-    #通知线程退出并等待所有线程结束
+    #等待图像裁剪任务队列被清空
+    while not workQueue.empty():
+        pass
+    #通知裁剪任务处理线程退出并等待所有线程结束
     for t in threads:
-        print("exit:", t.getName())
+        print("\r\nexit:", t.getName())
         t.exit()
         t.join()
-    print("图片分割结束")
+    print("finish image cropping")
+    #等待record任务队列被清空
+    while not recQueue.empty():
+        pass
+    #通知record处理线程退出
     for t in recThreads:
-        print("exit:", t.getName())
+        print("\r\nexit:", t.getName())
         t.exit()
         t.join()
-    print("record处理结束")
+    print("finish record processing")
     #图片分割结束， 停止向recQueue填充， 通知record处理线程退出
     # global g_exitFlag_recQueue
     # g_exitFlag_recQueue = 1
 
-@log('log')
-def cropping_image(imageNames):
+@log()
+def t_crop_image(imageNames):
     #读取txt文件， 把每一行文本内容保存的新文件， 读取每行坐标调用裁剪函数
     imgCounts = len(imageNames)
     invalidimg = []
-    global g_img_prod_count
+    records = {
+        'label': [],
+        'height': [],
+        'width':[],
+        'channels': [],
+        'image': [],
+        }
     for j in range(imgCounts):
-        g_img_count_lock.acquire()
-        g_img_prod_count += 1
-        g_img_count_lock.release()
-        print("\r{}/{}".format(*(str(g_img_prod_count), str(g_img_total))), end='', flush=True)      #实时输出处理进度
         imageTxt = os.path.join(g_txt_train_path, imageNames[j][:-4] + '.txt')     # txt路径
         imageName =imageNames[j]
         imgSrc = cv2.imread(imageName)
@@ -184,7 +192,13 @@ def cropping_image(imageNames):
                     pt4=list(map(int,pt4))
                     pt3=list(map(int,pt3))
                     imgOut = rotate(imgSrc,pt1,pt2,pt3,pt4,newImageName)     #计算旋转角度并截取图片 
-                    generate_record(lineContent, imgOut) 
+                    
+                    records = generate_records(records, lineContent, imgOut) 
+    #最后剩余的record一次性入队
+    recQueueLock.acquire()      
+    recQueue.put(records)
+    recQueueLock.release()
+
     
 '''旋转图像并剪裁'''
 @log()
@@ -227,24 +241,49 @@ def rotate(img,                    # 图片
         return imgOut
 
 @log()
-def generate_record(lineContent, imgOut):
+def generate_records(records, lineContent, imgOut):
     #将图像和标签打包成record, 压入队列， 供写文件线程读取
     # imgOut = np.array(imgOut, dtype=np.uint8)   #以uint8格式存储， 读取的时候按此格式恢复
     global recQueue, recQueueLock       #使用全局变量需要声明
-    record = {
-        'label': [lineContent],
-        'height': [imgOut.shape[0]],
-        'width':[imgOut.shape[1]],
-        'channels': [imgOut.shape[2]],
-        'image': [imgOut.reshape((1,-1))],
-    }
+    try:
+        records['label'].append(lineContent)
+        records['height'].append(imgOut.shape[0])
+        records['width'].append(imgOut.shape[1])
+        records['channels'].append(imgOut.shape[2])
+        records['image'].append(imgOut.reshape((1,-1)))
+        # record = {
+        # 'label': [lineContent],
+        # 'height': [imgOut.shape[0]],
+        # 'width':[imgOut.shape[1]],
+        # 'channels': [imgOut.shape[2]],
+        # 'image': [imgOut.reshape((1,-1))],
+        # }
+    except:     #遇到异常的数据直接跳过
+        pass
+    finally:
+        pass
+
     #将打包好的record压入队列中
-    recQueueLock.acquire()      
-    recQueue.put(record)
-    recQueueLock.release()
+    if len(records['height']) >= 100:
+        recQueueLock.acquire()      
+        recQueue.put(records)
+        recQueueLock.release()
+        records = {
+        'label': [],
+        'height': [],
+        'width':[],
+        'channels': [],
+        'image': [],
+        }
+    return records
 
 # @log('log')
 def write_record(record):
+    global g_img_prod_count
+    g_img_count_lock.acquire()
+    g_img_prod_count += len(record['height'])
+    g_img_count_lock.release()
+    print("\r{}--{}--{}".format(*(str(g_img_prod_count), str(recQueue.qsize()), str(g_img_total))), end='', flush=True)      #实时输出处理进度
     #record处理函数， 将record追加写入到对应的文件中
     df = pd.DataFrame(record)
     tName = threading.current_thread().getName()
