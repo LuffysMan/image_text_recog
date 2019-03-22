@@ -1,50 +1,65 @@
 import cv2
 import math
-import numpy as np
 import os
+import numpy as np
 import glob
-from math import fabs, sin, cos, acos, radians
+import pandas as pd 
+import functools
 
 import threading
 import queue
 import multiprocessing
 
+from math import fabs, sin, cos, acos, radians
+
 IMAGE_TRAIN_PATH = 'dataset/image_train'
 TXT_TRAIN_PATH = 'dataset/txt_train'
 IMAGE_TRAIN_PROD_PATH = 'dataset/img_train_prod'     #预处理后的图像路径
 TXT_TRAIN_PROD_PATH = 'dataset/txt_train_prod'       #预处理后的图像对应文本路径
+RECORD_PATH = 'dataset/record'
 g_img_train_path = os.path.join(os.getcwd(), IMAGE_TRAIN_PATH)
 g_txt_train_path = os.path.join(os.getcwd(), TXT_TRAIN_PATH)
 g_img_train_prod_path = os.path.join(os.getcwd(), IMAGE_TRAIN_PROD_PATH)
 g_txt_train_prod_path = os.path.join(os.getcwd(), TXT_TRAIN_PROD_PATH)
+g_record_path = os.path.join(os.getcwd(), RECORD_PATH)
 
-g_exitFlag = 0
+# g_exitFlag_workqueue = 0
+# g_exitFlag_recQueue = 0
 
+g_thread_count = multiprocessing.cpu_count()   #开辟线程数量
 g_img_total = 0             #图片总数
 g_img_prod_count = 0        #已处理图片总数
 g_img_count_lock = threading.Lock()
 
+recQueue = queue.Queue()         #创建容量为100的队列，用于接收record
+recQueueLock = threading.Lock()  
+workQueue = queue.Queue(2*g_thread_count)   #用户图像裁剪的任务队列锁 
+cropQueueLock = threading.Lock()              
+
 class myThread(threading.Thread):
     __threadCount = 0
-    __lock = threading.Lock()
-    def __init__(self, name, q=None):
-        threading.Thread.__init__(self)
+    # __lock = threading.Lock()
+    def __init__(self, name, function=None, queue=None, lock=None):
+        #输入参数：线程名称， 线程函数， 线程函数处理的队列， 线程锁
+        threading.Thread.__init__(self, name=name)
         self._threadID = self.__threadCount
         self.__threadCount += 1
-        self._name = name
-        self._queue = q
+        # self._name = name
+        self._func = function
+        self._queue = queue
+        self.__lock = lock
+        self._exitflag = 0
 
     def run(self):
         # print("开始线程： " + self._name)
         # queueLock = threading.Lock()
-        while not g_exitFlag:
+        while not self._exitflag:
             self.__lock.acquire()
             # queueLock.acquire()
             if not self._queue.empty():
                 data = self._queue.get()
                 self.__lock.release()
-                # queueLock.release()
-                process_image(data)
+                self._func(data)
             else:
                 self.__lock.release()
                 # queueLock.release()
@@ -52,50 +67,76 @@ class myThread(threading.Thread):
     @property
     def threadID(self):
         return self._threadID
+    def exit(self):
+        self._exitflag = 1
 
+
+
+def log(text=None):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kw):
+            if text is not None:
+                print( '%s %s():' % (text, func.__name__))
+            return func(*args, **kw)
+        return wrapper
+    return decorator
+
+@log()
 def divide_conquer():
-    os.chdir(os.path.join(os.getcwd(), IMAGE_TRAIN_PATH))   #修改当前工作路径, 方便获取文件名
+    global g_img_total, g_thread_count, cropQueueLock, workQueue
+    os.chdir(os.path.join(os.getcwd(), IMAGE_TRAIN_PATH))       #修改当前工作路径, 方便获取文件名
     image_names_train = glob.glob('*.jpg')                     #获取工作路径下所有jpg格式文件名到list中
-    global g_img_total
     g_img_total = len(image_names_train) 
     print("total images: {}".format(g_img_total))
     #划分任务分配给多线程
-    threadCount =  multiprocessing.cpu_count()
-    threadNames = ['thread-{}'.format(i) for i in range(threadCount)]
+    threadNames = ['thread-crop{}'.format(i) for i in range(g_thread_count)]
     threads = []
-    queueLock1 = threading.Lock()
-    workQueue = queue.Queue(2*threadCount)
     #创建新线程
-    print("start {} threads".format(threadCount))
+    print("start {} threads".format(g_thread_count))
     for tName in threadNames:
-        thread = myThread(tName, workQueue)
+        thread = myThread(tName, cropping_image, workQueue, cropQueueLock)
         thread.start()
         threads.append(thread)
     #分割数据      
-    fraction_size = int(g_img_total/threadCount)
-    remains_count = int(g_img_total % threadCount)
+    fraction_size = int(g_img_total/g_thread_count)
+    remains_count = int(g_img_total % g_thread_count)
     fractions = []
-    for i in range(threadCount):
+    for i in range(g_thread_count):
         fractions.append(image_names_train[i*fraction_size:(i+1)*fraction_size])
     if remains_count:
         fractions.append(image_names_train[g_img_total - remains_count: g_img_total])
     #填充队列
-    queueLock1.acquire()
+    cropQueueLock.acquire()
     for each in fractions:
         workQueue.put(each)
-    queueLock1.release()
+    cropQueueLock.release()
     #等待队列清空
     while not workQueue.empty():
         pass
     #通知线程退出
-    global g_exitFlag   #全局变量在函数内部引用没有歧义， 但是在函数内部修改值的时候，需要加上global声明，否则变为局部变量
-    g_exitFlag = 1
-    #等待所有线程结束
+    # global g_exitFlag_workqueue   #全局变量在函数内部引用没有歧义， 但是在函数内部修改值的时候，需要加上global声明，否则变为局部变量
+    # g_exitFlag_workqueue = 1
+    #开启record处理线程
+    recThreads = processing_record()
+
+    #通知线程退出并等待所有线程结束
     for t in threads:
+        print("exit:", t.getName())
+        t.exit()
         t.join()
     print("图片分割结束")
+    for t in recThreads:
+        print("exit:", t.getName())
+        t.exit()
+        t.join()
+    print("record处理结束")
+    #图片分割结束， 停止向recQueue填充， 通知record处理线程退出
+    # global g_exitFlag_recQueue
+    # g_exitFlag_recQueue = 1
 
-def process_image(imageNames):
+@log('log')
+def cropping_image(imageNames):
     #读取txt文件， 把每一行文本内容保存的新文件， 读取每行坐标调用裁剪函数
     imgCounts = len(imageNames)
     invalidimg = []
@@ -133,9 +174,9 @@ def process_image(imageNames):
                         lineContent = str(lineContent)[2:-2]
                     else:
                         lineContent = str(lineContent)[2:-4]
-                    file = open(newTxtName,'w')				#打开or创建一个新的txt文件
-                    file.write(lineContent)        					#写入内容信息  
-                    file.close()  
+                    # file = open(newTxtName,'w')				#打开or创建一个新的txt文件
+                    # file.write(lineContent)        					#写入内容信息  
+                    # file.close()  
                     # str转float
                     pt1 = list(map(float,lines[i].split(',')[:2]))
                     pt2 = list(map(float,lines[i].split(',')[2:4]))
@@ -146,14 +187,16 @@ def process_image(imageNames):
                     pt2=list(map(int,pt2))        
                     pt4=list(map(int,pt4))
                     pt3=list(map(int,pt3))
-                    rotate(imgSrc,pt1,pt2,pt3,pt4,newImageName)     #计算旋转角度并截取图片  
+                    imgOut = rotate(imgSrc,pt1,pt2,pt3,pt4,newImageName)     #计算旋转角度并截取图片 
+                    generate_record(lineContent, imgOut) 
     
 '''旋转图像并剪裁'''
+@log()
 def rotate(img,                    # 图片
            pt1, pt2, pt3, pt4,     # 四点坐标
            newImageName):            # 输出图片路径
     withRect = math.sqrt((pt4[0] - pt1[0]) ** 2 + (pt4[1] - pt1[1]) ** 2)      # 矩形框的宽度
-#    heightRect = math.sqrt((pt1[0] - pt2[0]) ** 2 + (pt1[1] - pt2[1]) **2)
+    #heightRect = math.sqrt((pt1[0] - pt2[0]) ** 2 + (pt1[1] - pt2[1]) **2)
     if(withRect!=0):
         angle = acos((pt4[0] - pt1[0]) / withRect) * (180 / math.pi)               # 矩形框旋转角度
     
@@ -183,26 +226,67 @@ def rotate(img,                    # 图片
             pt1[0],pt3[0]=pt3[0],pt1[0]
     
         imgOut = imgRotation[int(pt2[1]):int(pt4[1]), int(pt1[0]):int(pt3[0])]
-        cv2.imwrite(newImageName, imgOut)  # 保存得到的旋转后的矩形框
-        return imgRotation                 # rotated image
+        # cv2.imwrite(newImageName, imgOut)  # 保存得到的旋转后的矩形框
+        # return imgRotation                 # rotated image
+        return imgOut
+
+@log()
+def generate_record(lineContent, imgOut):
+    #将图像和标签打包成record, 压入队列， 供写文件线程读取
+    # imgOut = np.array(imgOut, dtype=np.uint8)   #以uint8格式存储， 读取的时候按此格式恢复
+    global recQueue, recQueueLock       #使用全局变量需要声明
+    record = {
+        'label': [lineContent],
+        'height': [imgOut.shape[0]],
+        'width':[imgOut.shape[1]],
+        'channels': [imgOut.shape[2]],
+        'image': [imgOut.reshape((1,-1))],
+    }
+    #将打包好的record压入队列中
+    recQueueLock.acquire()      
+    recQueue.put(record)
+    recQueueLock.release()
+
+# @log('log')
+def write_record(record):
+    #record处理函数， 将record追加写入到对应的文件中
+    df = pd.DataFrame(record)
+    tName = threading.current_thread().getName()
+    path = os.path.join(g_record_path, tName)
+    df.to_csv(path, mode='a', header=None, sep=',', index=None)    #以线程名为文件名， 每个线程写自己的文件
+
+def processing_record():
+    global recQueue, recQueueLock
+    #创建线程
+    tNames = ["thread_record-{}".format(i) for i in range(12)]
+    threads = []
+    for tName in tNames:
+        thread = myThread(tName, function=write_record, queue=recQueue, lock=recQueueLock)
+        thread.start()
+        threads.append(thread)
+    return threads
+    # #等待所有线程结束
+    # for t in threads:
+    #     t.join()
+    # print("记录保存完成")
+
 
     
 if __name__=="__main__":
-    cur_path = os.getcwd()
-    print("cur_path: {}".format(cur_path))
+    # cur_path = os.getcwd()
+    # print("cur_path: {}".format(cur_path))
     # image_path_prod = os.path.join(cur_path, "dataset/img_train_prod")
     # txt_path_prod = os.path.join(cur_path, "dataset/txt_train_prod")
     if not os.path.exists(g_img_train_prod_path):
         os.mkdir(g_img_train_prod_path)
     if not os.path.exists(g_txt_train_prod_path):
         os.mkdir(g_txt_train_prod_path)
-    # allpic = 0
-    # curImage = ''
-    # nowtxt = ''
-    # nowline = 0
-    # invalidimg=[]
-    # directory = os.path.join(cur_path, TXT_TRAIN_PATH) #TXT文件路径
-    # ext = '.txt'
+    if not os.path.exists(g_record_path):
+        os.mkdir(g_record_path)
+    #通过划分图像文件， 并行的进行裁剪处理
     divide_conquer()
+    #将裁剪好的图片和label写入record文件
+    # processing_record()
+
 
 
