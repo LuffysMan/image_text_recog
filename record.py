@@ -13,7 +13,7 @@ import multiprocessing
 
 from math import fabs, sin, cos, acos, radians
 from utils import myThread, log
-from parameters import RECORD_PATH, IMAGE_TRAIN_PATH, TXT_TRAIN_PATH, BATCH_SIZE            
+from parameters import IMAGE_TRAIN_PATH, TXT_TRAIN_PATH, BATCH_SIZE            
 
 np.set_printoptions(threshold=1000000000)
 
@@ -21,6 +21,7 @@ g_thread_count = multiprocessing.cpu_count()   #开辟线程数量
 g_img_total = 0             #图片总数
 g_img_prod_count = 0        #已处理图片总数
 g_img_count_lock = threading.Lock()
+g_active_cropThread_Count = 0    #裁剪工作线程计数
 
 recQueue = queue.Queue()         #用于接收record
 recQueueLock = threading.Lock()  
@@ -29,7 +30,7 @@ cropQueueLock = threading.Lock()
 
 @log()
 def divide_conquer():
-    global g_img_total, g_thread_count, cropQueueLock, workQueue
+    global g_img_total, g_thread_count, cropQueueLock, workQueue, g_active_cropThread_Count
     os.chdir(os.path.join(os.getcwd(), IMAGE_TRAIN_PATH))       #修改当前工作路径, 方便获取文件名
     image_names_train = glob.glob('*.jpg')                     #获取工作路径下所有jpg格式文件名到list中
     g_img_total = len(image_names_train) 
@@ -42,6 +43,7 @@ def divide_conquer():
     for tName in threadNames:
         thread = myThread(tName, t_crop_image, workQueue, cropQueueLock)
         thread.start()
+        g_active_cropThread_Count += 1
         threads.append(thread)
     #分割数据      
     fraction_size = int(g_img_total/g_thread_count)
@@ -59,12 +61,13 @@ def divide_conquer():
     cropQueueLock.release()
 
     #通知线程退出
-    exit_thread = threading.Thread(target = wait_exit_threads, name="wait", args=(threads, workQueue))
-    exit_thread.start()
+    exit_crop_thread = threading.Thread(target = wait_exit_threads, name="wait", args=(threads, workQueue))
+    exit_crop_thread.start()
     # exit_thread.join()
-    print("test join")
+    # print("test join")
 
 def wait_exit_threads(threads, workQueue):
+    global g_active_cropThread_Count
     #等待图像裁剪任务队列被清空
     while not workQueue.empty():
         pass
@@ -72,7 +75,8 @@ def wait_exit_threads(threads, workQueue):
     for t in threads:
         print("\r\nexit:", t.getName())
         t.exit()
-        # t.join()
+        t.join()
+        g_active_cropThread_Count -= 1
 
 @log()
 def t_crop_image(imageNames):
@@ -195,47 +199,50 @@ def generate_records(records, lineContent, imgOut, idx):
         records = {}
     return records
 
-# @log('log')
-def write_record(records):
-    global g_img_prod_count
-    g_img_count_lock.acquire()
-    g_img_prod_count += len(records)
-    g_img_count_lock.release()
-    # print("\r{}--{}--{}".format(*(str(g_img_prod_count), str(recQueue.qsize()), str(g_img_total))), end='', flush=True)      #实时输出处理进度
-    #record处理函数， 将record追加写入到对应的文件中
-    jsonRecords = json.dumps(records)
-    tName = threading.current_thread().getName()
-    path = os.path.join(RECORD_PATH, tName)
-    with open(path, mode='a') as f:
-        f.write(jsonRecords)
-        f.write('\r\n')
-    # df = pd.DataFrame(records)
-    # df.to_csv(path, mode='a', header=None, sep=',', index=None)    #以线程名为文件名， 每个线程写自己的文件
+# # @log('log')
+# def t_write_record(records):
+#     global g_img_prod_count
+#     g_img_count_lock.acquire()
+#     g_img_prod_count += len(records)
+#     g_img_count_lock.release()
+#     # print("\r{}--{}--{}".format(*(str(g_img_prod_count), str(recQueue.qsize()), str(g_img_total))), end='', flush=True)      #实时输出处理进度
+#     #record处理函数， 将record追加写入到对应的文件中
+#     jsonRecords = json.dumps(records)
+#     tName = threading.current_thread().getName()
+#     path = os.path.join(RECORD_PATH, tName)
+#     with open(path, mode='a') as f:
+#         f.write(jsonRecords)
+#         f.write('\r\n')
+#     # df = pd.DataFrame(records)
+#     # df.to_csv(path, mode='a', header=None, sep=',', index=None)    #以线程名为文件名， 每个线程写自己的文件
 
-def processing_record():
-    global recQueue, recQueueLock
-    #创建线程
-    tNames = ["thread_record-{}".format(i) for i in range(12)]
-    threads = []
-    for tName in tNames:
-        thread = myThread(tName, function=write_record, queue=recQueue, lock=recQueueLock)
-        thread.start()
-        threads.append(thread)
-    return threads
-    # #等待所有线程结束
-    # for t in threads:
-    #     t.join()
-    # print("记录保存完成")
+# def processing_record():
+#     global recQueue, recQueueLock
+#     #创建线程
+#     tNames = ["thread_record-{}".format(i) for i in range(12)]
+#     threads = []
+#     for tName in tNames:
+#         thread = myThread(tName, function=t_write_record, queue=recQueue, lock=recQueueLock)
+#         thread.start()
+#         threads.append(thread)
+#     return threads
+#     # #等待所有线程结束
+#     # for t in threads:
+#     #     t.join()
+#     # print("记录保存完成")
 
 
-def start_produce():
-    if not os.path.exists(RECORD_PATH):
-        os.mkdir(RECORD_PATH)
-    #通过划分图像文件， 并行的进行裁剪处理
-    divide_conquer()
-    
-if __name__=="__main__":
-    start_produce()
+# def start_produce():
+#     #开始读取图片并裁剪, 将结果压入队列, 使用是从队头取
+#     # if not os.path.exists(path):
+#         # os.mkdir(path)
+#     #通过划分图像文件， 并行的进行裁剪处理
+#     divide_conquer()
+
+def get_cropThreadCount():
+    global g_active_cropThread_Count
+    return g_active_cropThread_Count
+
 
 
 

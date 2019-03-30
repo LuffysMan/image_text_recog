@@ -42,7 +42,7 @@ def log(text=None):
         @functools.wraps(func)
         def wrapper(*args, **kw):
             if text is not None:
-                print( '%s %s():' % (text, func.__name__))
+                print( '%s %s %s():' % (text, func.__module__, func.__name__))
             return func(*args, **kw)
         return wrapper
     return decorator

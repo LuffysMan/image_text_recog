@@ -11,16 +11,17 @@ dataset.py
 dataset|
         |image_train        #训练集图片
         |txt_train          #训练集图片对应文本
-        |image_train_prod   #训练集图片进行分割后结果
-        |txt_train_prod     #训练集文本处理后结果
+        <!-- |image_train_prod   #训练集图片进行分割后结果 -->
+        <!-- |txt_train_prod     #训练集文本处理后结果 -->
         |image_test         #测试集图片
 ## 关于dataset.py
-需要加载的模块：opencv和math
+<!-- 需要加载的模块：opencv和math
 主要功能：读取image_train和txt_train中的数据集， 根据提供的坐标对图片进行裁剪， 并输出对应的图片和文本
 到img_train_prod和txt_train_prod； 
 使用方法：
 运行前可配置开启的线程数（默认线程数同计算机CPU数量)， 配置变量g_thread_count， 建议数量不超过cpu数量2倍
-在终端输入：python dataset.py
+在终端输入：python dataset.py -->
+直接读取原图同时读取对应文本, 在内存中进行裁剪后不再写入磁盘, 直接组成训练数据输出
 训练样例总数：142434
 
 ## 关于输入图像尺寸不同的处理办法
