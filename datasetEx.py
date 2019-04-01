@@ -14,6 +14,7 @@ import queue
 import threading 
 import random
 import glob
+import time
 
 from PIL import Image
 
@@ -134,18 +135,17 @@ class DataSets(object):
                 result_labels.append(labels[i])
             except:
                 print("failed resize", image.shape)
-                im.save('./test/resized/%s-%.4d.jpg'%(labels[i], i))
+                # im.save('./test/resized/%s-%.4d.jpg'%(time.time(), i))
                 bad.append(i)
             finally:
                 i += 1
         return result_images, result_labels
 
     def writeimage(self, images, labels):
-        path = './test/origin/%s-%.4d.jpg'
         i = 0
         for image in images:
             im = Image.fromarray(image.astype('uint8')).convert('RGB')
-            im.save(path%(labels[i], i))
+            # im.save('./test/origin/%s-%.4d.jpg'%(time.time(), i))
             i += 1
 @log()
 def read_data_sets(filenames):
