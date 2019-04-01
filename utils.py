@@ -1,6 +1,7 @@
 #coding: utf-8
 import threading
 import functools
+import os   
 
 class myThread(threading.Thread):
     __threadCount = 0
@@ -37,6 +38,18 @@ class myThread(threading.Thread):
         self._exitflag = 1
 
 
+class chdir():
+    def __init__(self, newdir):
+        self._olddir = os.getcwd()
+        self._newdir = newdir
+    def __enter__(self):
+        os.chdir(self._newdir)
+        # print("enter work dir", self._newdir)
+    def __exit__(self, a, b, c):
+        os.chdir(self._olddir)
+        # print("exit work dir ", self._newdir)
+
+
 def log(text=None):
     def decorator(func):
         @functools.wraps(func)
@@ -46,7 +59,6 @@ def log(text=None):
             return func(*args, **kw)
         return wrapper
     return decorator
-
 
 
 

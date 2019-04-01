@@ -12,7 +12,7 @@ import queue
 import multiprocessing
 
 from math import fabs, sin, cos, acos, radians
-from utils import myThread, log
+from utils import myThread, log, chdir
 from parameters import IMAGE_TRAIN_PATH, TXT_TRAIN_PATH, BATCH_SIZE            
 
 np.set_printoptions(threshold=1000000000)
@@ -29,11 +29,13 @@ workQueue = queue.Queue(2*g_thread_count)   #用户图像裁剪的任务队列
 cropQueueLock = threading.Lock()              
 
 @log()
-def divide_conquer():
+def divide_conquer(image_names_train):
     global g_img_total, g_thread_count, cropQueueLock, workQueue, g_active_cropThread_Count
-    os.chdir(os.path.join(os.getcwd(), IMAGE_TRAIN_PATH))       #修改当前工作路径, 方便获取文件名
-    image_names_train = glob.glob('*.jpg')                     #获取工作路径下所有jpg格式文件名到list中
-    g_img_total = len(image_names_train) 
+    # with chdir(IMAGE_TRAIN_PATH) as ch:
+    #     # os.chdir(os.path.join(os.getcwd(), IMAGE_TRAIN_PATH))       #修改当前工作路径, 方便获取文件名
+    #     image_names_train = glob.glob('*.jpg')                     #获取工作路径下所有jpg格式文件名到list中
+    #     # image_names_train = glob.glob(os.path.join(IMAGE_TRAIN_PATH, '*.jpg'))                     #获取工作路径下所有jpg格式文件名到list中
+    g_img_total = len(image_names_train)
     print("total images: {}".format(g_img_total))
     #划分任务分配给多线程
     threadNames = ['thread-crop{}'.format(i) for i in range(g_thread_count)]
@@ -86,8 +88,13 @@ def t_crop_image(imageNames):
     records = {}
     tName = threading.current_thread().getName()
     for j in range(imgCounts):
+        # tmpName = imageNames[j].split('/')[-1]
+        # tmpName = tmpName.split('.')[-3:-1]
+        # tmpName.append('txt')
+        # print(tmpName)
+        # imageTxt = os.path.join(TXT_TRAIN_PATH, '.'.join(tmpName))     # txt路径
         imageTxt = os.path.join(TXT_TRAIN_PATH, imageNames[j][:-4] + '.txt')     # txt路径
-        imageName =imageNames[j]
+        imageName =os.path.join(IMAGE_TRAIN_PATH, imageNames[j])
         imgSrc = cv2.imread(imageName)
         if(imgSrc is None):
             invalidimg.append(imageName)

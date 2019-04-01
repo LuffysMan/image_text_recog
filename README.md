@@ -21,8 +21,11 @@ dataset|
 使用方法：
 运行前可配置开启的线程数（默认线程数同计算机CPU数量)， 配置变量g_thread_count， 建议数量不超过cpu数量2倍
 在终端输入：python dataset.py -->
-直接读取原图同时读取对应文本, 在内存中进行裁剪后不再写入磁盘, 直接组成训练数据输出
+图像预处理方法: 直接读取原图同时读取对应文本, 在内存中进行裁剪后不再写入磁盘, 直接组成训练数据输出
 训练样例总数：142434
+
+使用方法:
+具体使用方法参考dsatasetEx.py中的demo函数
 
 ## 关于输入图像尺寸不同的处理办法
 - 方案1： 将图像按照给定的bounding box进行分割， 并分批存储到tfrecord，  
@@ -34,16 +37,22 @@ dataset|
 文本中的每个字符按照字典序编码(字典需自行构造)， loss计算使用”编辑距离“
 
 ## 参考文献:  
-1. python扩大训练集样本数量-图片转换、改变尺寸 https://blog.csdn.net/weixin_42052460/article/details/80861056  
-2. 【python】详解zipfile模块读取处理压缩文件实例: https://blog.csdn.net/brucewong0516/article/details/79064384  
+1. 图像预处理
+  python扩大训练集样本数量-图片转换、改变尺寸 https://blog.csdn.net/weixin_42052460/article/details/80861056 
+  在Python and OpenCV中做图象处理:改变大小，旋转和裁剪(翻译)  https://blog.csdn.net/fxt570762000/article/details/80241446 
+  图像处理之PIL.Image与numpy.array之间的相互转换 https://blog.csdn.net/qq_30159015/article/details/80070514
+  第一篇 Python图片处理模块PIL（pillow） http://www.cnblogs.com/chimeiwangliang/p/7130434.html
+  Python用Pillow(PIL)进行简单的图像操作 https://www.cnblogs.com/sun-haiyu/p/7127582.html
+2. 压缩文件处理
+  【python】详解zipfile模块读取处理压缩文件实例: https://blog.csdn.net/brucewong0516/article/details/79064384  
 3. 多线程处理图片：  
     Python 类中的"静态"成员变量: https://www.cnblogs.com/turtle-fly/p/3280610.html  
     Python的访问修饰符： http://blog.sina.com.cn/s/blog_bb48e6be0102wbgd.html  
     使用@property: 廖雪峰博客  
     python 全局变量引用与修改： https://www.cnblogs.com/yanfengt/p/6305542.html  
 4. 构建字典， 处理图像对应的字符标签
-超酷算法（1）：BK树(http://blog.jobbole.com/78811/)
-文字识别(OCR)CRNN（基于pytorch、python3） 实现不定长中文字符识别(https://blog.csdn.net/Sierkinhane/article/details/82857572)
+  超酷算法（1）：BK树(http://blog.jobbole.com/78811/)
+  文字识别(OCR)CRNN（基于pytorch、python3） 实现不定长中文字符识别(https://blog.csdn.net/Sierkinhane/article/details/82857572)
 ## 遇到的问题
 问题1: 在使用pandas.to_csv()函数将图像数据存储到txt中的时候, 出现了部分图像数据变为省略号的情况
 原因: 图像原始数据是numpy数组, numpy数组在使用print函数输出的时候, 如果超过1000个元素, 会用省略号'...'来代替部分元素; 并且实际情况
