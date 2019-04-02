@@ -93,8 +93,9 @@ class Consumer(object):
 
 class DataSets(object):
     def __init__(self, filenames):
-        self._height = 32       #将图像高度统一为32个像素
-        self._width = 128       #将图像宽度统一为100个像素
+        self._target_height = 32       #将图像高度统一为32个像素
+        self._target_width = 290       ##经统计, 90%的图片按比例将高度缩放至32时, 宽度不超过290,  80%的图片按比例将高度缩放至32时, 宽度不超过203,
+        self._box = (0,0,self._target_width, self._target_height)
         # self._train_test_ratio = 0.8
         # self._datapath = datapath
         self._image_files = filenames
@@ -128,9 +129,16 @@ class DataSets(object):
             try:
                 H = image.shape[0]
                 W = image.shape[1]
-                ratio = 32/H
+                ratioW = self._target_width/W          #经统计, 90%的图片按比例将高度缩放至32时, 宽度不超过290 
+                ratioH = self._target_height/H
+                if ratioH <= ratioW:
+                    size = (int(W*ratioH), 32)
+                else:
+                    size = (290, int(H*ratioW))
+                # ratio = self._target_height/H
                 im = Image.fromarray(image.astype('uint8')).convert('RGB')
-                im = im.resize((int(W*ratio), 32), Image.BILINEAR)
+                im = im.resize(size, Image.BILINEAR)    #将图像缩放至(<290, 32) 或(290, <32)
+                im = im.crop(self._box)                 #填充图像, 使之为(290, 32)
                 result_images.append(np.array(im))
                 result_labels.append(labels[i])
             except:

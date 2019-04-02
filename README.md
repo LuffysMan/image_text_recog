@@ -26,6 +26,7 @@ dataset|
 
 使用方法:
 具体使用方法参考dsatasetEx.py中的demo函数
+注意事项: 在window下跑需要修改路径字符串中的'/'为'\\'
 
 ## 关于输入图像尺寸不同的处理办法
 - 方案1： 将图像按照给定的bounding box进行分割， 并分批存储到tfrecord，  
