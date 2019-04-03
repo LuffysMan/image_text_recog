@@ -14,6 +14,7 @@ dataset|
         <!-- |image_train_prod   #训练集图片进行分割后结果 -->
         <!-- |txt_train_prod     #训练集文本处理后结果 -->
         |image_test         #测试集图片
+训练样例总数：142434
 ## 关于dataset.py
 <!-- 需要加载的模块：opencv和math
 主要功能：读取image_train和txt_train中的数据集， 根据提供的坐标对图片进行裁剪， 并输出对应的图片和文本
@@ -21,17 +22,30 @@ dataset|
 使用方法：
 运行前可配置开启的线程数（默认线程数同计算机CPU数量)， 配置变量g_thread_count， 建议数量不超过cpu数量2倍
 在终端输入：python dataset.py -->
-图像预处理方法: 直接读取原图同时读取对应文本, 在内存中进行裁剪后不再写入磁盘, 直接组成训练数据输出
-训练样例总数：142434
+提供的接口:
+1. train_valid_split()      #功能: 按比例随机划分训练集和验证集, 输入: 图片所在路径和划分比例; 输出: 训练集和测试集文件名列表
+2. read_data_sets()       
+功能: 返回一个DataSets对象, 启动图片处理线程
+输入: 训练集或者验证集文件名列表
+输出: DataSets对象
+3. DataSets.next_batch()
+功能: 返回BATCH_SIZE大小的数据集
+输入: 无
+输出: 两个list: images, labels
+
+
 
 使用方法:
 具体使用方法参考dsatasetEx.py中的demo函数
-注意事项: 在window下跑需要修改路径字符串中的'/'为'\\'
+注意事项: 在window下跑, 需要 在parameters.py中修改 路径字符串中的'/'为'\\',
 
 ## 关于输入图像尺寸不同的处理办法
-- 方案1： 将图像按照给定的bounding box进行分割， 并分批存储到tfrecord，  
-进行神经网络训练前，先读取tfrecord， 然后将图像还原， 进一步resize为统一的高度， 输入到crnn 
-- 由于tensorflow与paddlepaddle不兼容， 所以将record做成与框架无关， 采用pandas追加式写txt
+<!-- - 方案1： 将图像按照给定的bounding box进行分割， 并分批存储到tfrecord，  
+进行神经网络训练前，先读取tfrecord， 然后将图像还原， 进一步resize为统一的高度， 输入到crnn  -->
+<!-- - 由于tensorflow与paddlepaddle不兼容， 所以将record做成与框架无关， 采用pandas追加式写txt -->
+1. 读取原始图片和对应txt文件
+2. 根据文本对应坐标裁剪图片
+3. 统一裁剪后的图片尺寸(默认290x32)
 
 ## 如何计算loss
 - 图像对应的文本如何进行编码？ 训练模型如何计算loss

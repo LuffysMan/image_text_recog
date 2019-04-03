@@ -149,12 +149,12 @@ class DataSets(object):
                 i += 1
         return result_images, result_labels
 
-    def writeimage(self, images, labels):
-        i = 0
-        for image in images:
-            im = Image.fromarray(image.astype('uint8')).convert('RGB')
-            # im.save('./test/origin/%s-%.4d.jpg'%(time.time(), i))
-            i += 1
+    # def writeimage(self, images, labels):
+    #     i = 0
+    #     for image in images:
+    #         im = Image.fromarray(image.astype('uint8')).convert('RGB')
+    #         im.save('./test/origin/%s-%.4d.jpg'%(time.time(), i))
+    #         i += 1
 @log()
 def read_data_sets(filenames):
     data_sets = DataSets(filenames)
