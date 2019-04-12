@@ -79,8 +79,8 @@ dataset|
     print(b, c)     #都是缩写的情况
 解决: 方案1 使用 np.tostring()或者np.tolist(), 比如 b=a.tolist()
 方案2 在代码开头设置 np.set_printoptions(threshold=1000*1000*1000) #这样一百万个元素以下的数组都可以正常显示或写入
-# 模型定义(肖扬&汤凌风):
-
+# 模型定义(肖杨&汤凌峰):
+这是CRNN的model后续训练需要调用的模块
 # 模型可视化(梁帆):
 #预计采用TensorBoard进行可视化
 #参考书籍
